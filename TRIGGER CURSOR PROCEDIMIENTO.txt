@@ -1,0 +1,99 @@
+/*trigger*/
+select 
+(cliente.clie_nombre || ' ' || cliente.clie_apellido )as nombre, rd_observacion, fac_fecha
+from reserva_areas
+inner join habitacion on habitacion.habitacion_id = reserva_areas.habitacion_id 
+inner join reserva on  reserva.res_is = reserva_areas.res_is 
+inner join factura on factura.res_is = reserva.res_is
+inner join cliente on cliente.cli_id = reserva.cli_id
+order by fac_fecha
+--FUNCION
+create OR REPLACE function reserva ()
+returns trigger as 
+$$
+	begin
+	if(new.clie_nombre>='Alexy') then raise notice 'El cliente no puede reservar';
+	end if;
+	return new;
+	end;
+$$
+Language 'plpgsql';
+--TRIGGER 
+CREATE trigger reserva after insert
+on cliente  for each row
+execute procedure reserva();
+
+--INSERCION
+
+insert into CLIENTE values (default, 002, 'Alexy', 'Anchundia','Los Bajos', '0999991245', '1234578906');
+
+--VERIFICAR SI AUMENTO EL sueldo
+
+SELECT empleado_nombre, empleado_sueldo FROM empleado
+
+
+
+
+/*CURSOR */
+
+do $$
+declare
+	tabla Record;
+	cur_habitacion
+	Cursor 
+	for
+	select 
+		HABITACION.HABITACION_id,  sum(HABITACION.HABITACION_PRECIO), count( FACTURA.FAC_FECHA),
+			extract(year from FACTURA.FAC_FECHA)
+	from reserva_areas
+	inner join habitacion on habitacion.habitacion_id = reserva_areas.habitacion_id 
+	inner join reserva on  reserva.res_is = reserva_areas.res_is 
+	inner join factura on factura.res_is = reserva.res_is
+	group by hABITACION.HABITACION_id  , extract(year from FACTURA.FAC_FECHA);
+	begin
+	for tabla in cur_habitacion loop
+	Raise notice 'Numero de Hbitacion: %, Total: % ,Veces en el Año: %  ,Año: %'
+	,tabla.HABITACION_id, tabla.sum, tabla.count, tabla.date_part;
+	end loop;
+end $$
+language 'plpgsql';
+
+
+/*provedimiento almacenado*/
+
+
+create or replace function obtener_datos( nnn integer)
+RETURNS TABLE (clie_nombre varchar, 
+			   vecesenelaño integer,
+FAC_FECHA integer)
+as $body$
+begin
+	RETURN QUERY
+select 
+cliente.clie_nombre,    count( FACTURA.FAC_FECHA)::integer,
+extract(year from FACTURA.FAC_FECHA)::integer
+from reserva_areas
+inner join habitacion on habitacion.habitacion_id = reserva_areas.habitacion_id 
+inner join reserva on  reserva.res_is = reserva_areas.res_is 
+inner join factura on factura.res_is = reserva.res_is
+inner join cliente on cliente.cli_id = reserva.cli_id
+WHERE cliente.cli_id=nnn
+group by cliente.clie_nombre, extract(year from FACTURA.FAC_FECHA);
+end
+$body$ language plpgsql;
+
+select * from obtener_datos(3);
+
+
+
+/*reporte*/
+
+select habitacion.habitacion_id, sum(HABITACION.HABITACION_PRECIO) as total,extract(year from FACTURA.FAC_FECHA)
+from reserva_areas
+inner join habitacion on habitacion.habitacion_id = reserva_areas.habitacion_id 
+inner join AREAS on AREAS.SER_ID = reserva_areas.SER_ID
+inner join reserva on  reserva.res_is = reserva_areas.res_is 
+inner join factura on factura.res_is = reserva.res_is
+where extract(year from FACTURA.FAC_FECHA)='2020'
+group by habitacion.habitacion_id, extract(year from FACTURA.FAC_FECHA)
+order by extract(year from FACTURA.FAC_FECHA)
