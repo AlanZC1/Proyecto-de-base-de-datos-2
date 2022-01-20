@@ -1,4 +1,6 @@
+Que impida que un cliente reserve cuando este haya tenido 2 calificaciones mala las ultimas dos ocasiones 
 /*trigger*/
+
 select 
 (cliente.clie_nombre || ' ' || cliente.clie_apellido )as nombre, rd_observacion, fac_fecha
 from reserva_areas
